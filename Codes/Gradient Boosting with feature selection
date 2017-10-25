@@ -1,0 +1,95 @@
+# Preprocessing
+
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import GradientBoostingClassifier
+
+# Importing the data 
+
+dataset = pd.read_csv('train.csv')
+X = dataset.iloc[:, 2:].values
+y = dataset.iloc[:, [1]].values
+y = y.ravel()
+
+# Imputing missing values
+from sklearn.preprocessing import Imputer
+imputer = Imputer(missing_values = -1, strategy = 'mean', axis = 0)
+X[:,:] = imputer.fit_transform(X[:, :])
+    
+# Feature Scaling
+    
+from sklearn.preprocessing import StandardScaler
+sc = StandardScaler()
+X = sc.fit_transform(X)
+    
+# Separate Test/Train Set
+    
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X,y,test_size = 0.1)
+    
+# Stochastic Gradient Boosting Classification
+g_clf = GradientBoostingClassifier(n_estimators=50, learning_rate = 0.05, verbose = 2)
+g_clf.fit(X_train, y_train)
+    
+
+# predict X_test
+    
+y_pred = g_clf.predict_proba(X_test)
+y_pred = y_pred[:,1]
+y_test = y_test.ravel()
+    
+ # Gini coeffient
+def Gini(y_test, y_pred):
+    # check and get number of samples
+    assert y_test.shape == y_pred.shape
+    n_samples = y_test.shape[0]
+    
+    # sort rows on prediction column 
+    # (from largest to smallest)
+    arr = np.array([y_test, y_pred]).transpose()
+    true_order = arr[arr[:,0].argsort()][::-1,0]
+    pred_order = arr[arr[:,1].argsort()][::-1,0]
+    
+    # get Lorenz curves
+    L_true = np.cumsum(true_order) / np.sum(true_order)
+    L_pred = np.cumsum(pred_order) / np.sum(pred_order)
+    L_ones = np.linspace(1/n_samples, 1, n_samples)
+    
+    # get Gini coefficients (area between curves)
+    G_true = np.sum(L_ones - L_true)
+    G_pred = np.sum(L_ones - L_pred)
+    
+    # normalize to true Gini coefficient
+    return G_pred/G_true
+
+Gini = Gini(y_test, y_pred)
+
+############ Run for test set
+
+g_clf = GradientBoostingClassifier(n_estimators=500, verbose = 2)
+g_clf.fit(X, y)
+    
+
+######################################
+
+# Importing the data 
+
+dataset_test = pd.read_csv('test.csv')
+X_test = dataset_test.iloc[:, [34,20,46,47,50,2,14,49,37,38,39,43,19,44,35,42,45,41,40,48,31,36,26,18,33,21,32,29,53,25,52,55,54,4,23,3,56,51,24,27,28,15,22]].values
+
+# Imputing missing values
+
+from sklearn.preprocessing import Imputer
+imputer = Imputer(missing_values = -1, strategy = 'mean', axis = 0)
+X_test[:,0:43] = imputer.fit_transform(X_test[:, 0:43])
+
+# Feature Scaling
+
+from sklearn.preprocessing import StandardScaler
+sc = StandardScaler()
+X_test = sc.fit_transform(X_test)
+
+# predict X_test
+
+y_pred = g_clf.predict_proba(X_test)
+y_pred = y_pred[:,1]
